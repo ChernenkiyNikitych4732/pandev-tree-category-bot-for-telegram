@@ -43,12 +43,39 @@ public class Category {
     }
 
     public Category(String name) {
+        this();
         this.name = name;
     }
 
     public Category(String name, Category parent) {
         this.name = name;
         this.parent = parent;
+        if (parent != null) {
+            parent.getChildren().add(this);
+        }
+    }
+
+    public boolean hasCycle() {
+        Category current = this.parent;
+        while (current != null) {
+            if (current == this) {
+                return false;
+            }
+            current = current.getParent();
+        }
+        return false;
+    }
+
+    private String toTreeString(int level) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < level; i++) {
+            sb.append("  ");
+        }
+        sb.append("- ").append(name).append("\n");
+        for (Category child : children) {
+            sb.append(child.toTreeString(level + 1));
+        }
+        return sb.toString();
     }
 
     public Long getId() {

@@ -16,52 +16,62 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-public class DownloadCommand implements CommandHandler {
+/**
+ * Класс для обработки команды загрузки дерева категорий.
+ * Данный класс реализует интерфейс {@link CommandHandler} и используется для
+ * генерации и отправки пользователю Excel-файла с информацией о категориях.
+ */
 
+public class DownloadCommand implements CommandHandler {
     private final TelegramBotUpdatesControl bot;
     private final CategoryService categoryService;
+
+    /**
+     * Конструктор для создания экземпляра команды загрузки.
+     * @param bot Экземпляр управления обновлениями Telegram-бота.
+     * @param categoryService Сервис для работы с категориями.
+     */
 
     public DownloadCommand(TelegramBotUpdatesControl bot, CategoryService categoryService) {
         this.bot = bot;
         this.categoryService = categoryService;
     }
 
+    /**
+     * Выполняет обработку команды и отправку Excel-файла пользователю.
+     * @param update Объект обновления из Telegram.
+     */
+
     @Override
     public void execute(Update update) {
         long chatId = update.getMessage().getChatId();
-        File file = null;
         try {
-            file = generateExcelFile();
-            SendDocument document = SendDocument.builder()
+            File file = generateExcelFile();
+            bot.execute(SendDocument.builder()
                     .chatId(String.valueOf(chatId))
                     .document(new InputFile(file, "categories_tree.xlsx"))
                     .caption("Дерево категорий")
-                    .build();
-
-            bot.execute(document);
-
+                    .build());
+            file.delete();
         } catch (Exception e) {
-            bot.sendMessage(chatId, "Ошибка при генерации или отправке файла: " + e.getMessage());
-            e.printStackTrace(); // Optional: use a proper logger in production
-        } finally {
-            if (file != null && file.exists()) {
-                if (!file.delete()) {
-                    System.err.println("Не удалось удалить временный файл: " + file.getAbsolutePath());
-                }
-            }
+            bot.sendMessage(chatId, "Ошибка при генерации файла: " + e.getMessage());
         }
     }
+
+    /**
+     * Генерирует временный Excel-файл с информацией о дереве категорий.
+     * @return Файл с данными о категориях.
+     * @throws IOException Если возникает ошибка ввода-вывода при создании файла.
+     */
 
     public File generateExcelFile() throws IOException {
         File file = File.createTempFile("categories_tree", ".xlsx");
         List<Category> categories = categoryService.getAllCategories();
-
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Categories");
             Row headerRow = sheet.createRow(0);
             headerRow.createCell(0).setCellValue("Категория");
             headerRow.createCell(1).setCellValue("Родительская категория");
-
             int rowIndex = 1;
             for (Category category : categories) {
                 Row row = sheet.createRow(rowIndex++);
@@ -72,7 +82,6 @@ public class DownloadCommand implements CommandHandler {
 
             sheet.autoSizeColumn(0);
             sheet.autoSizeColumn(1);
-
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 workbook.write(fos);
             }
@@ -81,8 +90,15 @@ public class DownloadCommand implements CommandHandler {
         return file;
     }
 
+    /**
+     * Обработчик команды.
+     * @param chatId Идентификатор чата.
+     * @param messageText Текст сообщения.
+     * @param bot Экземпляр управления Telegram-ботом.
+     * @param update Последний update в боте.
+     */
+
     @Override
     public void handle(long chatId, String messageText, TelegramBotUpdatesControl bot, Update update) {
-        execute(update);
     }
 }
