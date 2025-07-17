@@ -68,9 +68,7 @@ public class Category {
 
     private String toTreeString(int level) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < level; i++) {
-            sb.append("  ");
-        }
+        sb.append("  ".repeat(Math.max(0, level)));
         sb.append("- ").append(name).append("\n");
         for (Category child : children) {
             sb.append(child.toTreeString(level + 1));
